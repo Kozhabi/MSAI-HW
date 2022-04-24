@@ -1,0 +1,58 @@
+from sklearn.datasets import load_iris
+from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import pandas as pd
+import numpy as np
+
+
+class Builder:
+    def __init__(self, X_train, Y_train):
+        self.X_train = X_train
+        self.Y_train = Y_train
+        self.random_seed = 0
+
+    def set_random_seed(self, seed):
+        self.random_seed = seed
+
+    def get_subsample(self, df_share):
+        # 1. Copy train dataset
+        X = self.X_train.copy()
+        Y = self.Y_train.copy()
+        
+        # 2. Shuffle data (don't miss the connection between X_train and Y_train)
+        X, Y = shuffle(X, Y, random_state=self.random_seed)
+        indexes = int((df_share / 100) * len(Y))
+        
+        # 3. Return df_share %-subsample of X_train and Y_train
+        return X[:indexes], Y[:indexes]
+
+
+if __name__ == "__main__":
+    # 1. Load iris dataset
+    iris = load_iris()
+    iris_df = pd.DataFrame(data=iris.data, columns=iris.feature_names)
+    
+    # 2. Shuffle data and divide into train / test.
+    X = iris_df.drop(labels='sepal length (cm)', axis=1)
+    Y = iris_df['sepal length (cm)']
+
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.33, random_state=101)
+    
+    
+    # 1. Preprocess curr_X_train, curr_y_train in the way you want  
+    pattern_item = Builder(X_train, Y_train)
+    
+    # 2. Train Linear Regression on the subsample
+    pattern_item.set_random_seed(42)
+    for df_share in range(10, 101, 10):
+        curr_X_train, curr_Y_train = pattern_item.get_subsample(df_share)
+        lr = LinearRegression()
+        lr.fit(curr_X_train, curr_Y_train)
+
+        lr.predict(X_test)
+        pred = lr.predict(X_test)
+        
+        # 3. Save or print the score to check how df_share affects the quality
+        print(f'MSE at {df_share}:', mean_squared_error(Y_test, pred)) 
